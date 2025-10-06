@@ -1,0 +1,23 @@
+# PDF and Excel Processing Requirements
+pandas>=2.0.0
+openpyxl>=3.1.0
+PyMuPDF>=1.23.0
+click>=8.1.0
+
+# OCR Processing Requirements
+pytesseract>=0.3.10
+pdf2image>=1.16.0
+Pillow>=10.0.0
+
+# Note: tkinter is included with Python standard library
+# No separate installation needed for tkinter
+
+# System Requirements for OCR:
+# - Tesseract OCR must be installed
+#   Ubuntu/Debian: sudo apt-get install tesseract-ocr
+#   macOS: brew install tesseract
+#   Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+# - Poppler utilities for pdf2image
+#   Ubuntu/Debian: sudo apt-get install poppler-utils
+#   macOS: brew install poppler
+#   Windows: Download from http://blog.alivate.com.au/poppler-windows/
