@@ -40,6 +40,38 @@ except ImportError as e:
     OCR_ERROR = str(e)
     logger.warning(f"OCR libraries not available: {e}")
 
+# Detect Poppler path on Windows
+POPPLER_PATH = None
+if platform.system() == 'Windows':
+    # Common Poppler installation locations
+    possible_paths = [
+        r'C:\Users\waqaa\OneDrive\Desktop\poppler-25.07.0\Library\bin',
+        r'C:\Program Files\poppler\Library\bin',
+        r'C:\poppler\Library\bin',
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            POPPLER_PATH = path
+            logger.info(f"Found Poppler at: {POPPLER_PATH}")
+            break
+    
+    if not POPPLER_PATH:
+        logger.warning("Poppler not found in common locations. Will rely on PATH.")
+
+# Detect Tesseract path on Windows
+if platform.system() == 'Windows' and OCR_AVAILABLE:
+    # Common Tesseract installation locations
+    tesseract_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        r'C:\Tesseract-OCR\tesseract.exe',
+    ]
+    for tess_path in tesseract_paths:
+        if os.path.exists(tess_path):
+            pytesseract.pytesseract.tesseract_cmd = tess_path
+            logger.info(f"Found Tesseract at: {tess_path}")
+            break
+
 
 class PDFExcelProcessor:
     """Main processor class for handling FAI Excel sheets and Material CoC PDFs"""
@@ -246,8 +278,11 @@ class PDFExcelProcessor:
         try:
             logger.info(f"Performing OCR on {pdf_path.name}...")
             
-            # Convert PDF to images
-            images = convert_from_path(str(pdf_path), dpi=200)
+            # Convert PDF to images with Poppler path if on Windows
+            if POPPLER_PATH:
+                images = convert_from_path(str(pdf_path), dpi=200, poppler_path=POPPLER_PATH)
+            else:
+                images = convert_from_path(str(pdf_path), dpi=200)
             
             found_pages = []
             search_term_lower = search_term.lower().strip()
