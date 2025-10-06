@@ -57,7 +57,7 @@ brew install tesseract poppler
 
 **Windows:**
 1. Download and install Tesseract from: https://github.com/UB-Mannheim/tesseract/wiki
-2. Download and install Poppler from: http://blog.alivate.com.au/poppler-windows/
+2. Download and install Poppler from: https://github.com/oschwartz10612/poppler-windows/releases
 3. Add both to your system PATH
 
 ### 2. Install Python Dependencies
