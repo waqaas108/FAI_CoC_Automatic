@@ -35,25 +35,6 @@ A powerful desktop application for processing FAI (First Article Inspection) Exc
 - **Force OCR**: Option to force OCR on all PDFs regardless of text content
 - **Auto-sizing Window**: GUI automatically adjusts to fit content
 
-## 📥 Quick Start (Pre-built Executables)
-
-### Windows
-1. Download `FAI_PDF_Processor.exe` from [Releases](../../releases)
-2. Install [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki)
-3. Install [Poppler](http://blog.alivate.com.au/poppler-windows/)
-4. Double-click the executable to run
-
-### macOS
-1. Download `FAI_PDF_Processor.dmg` from [Releases](../../releases)
-2. Install Tesseract: `brew install tesseract poppler`
-3. Drag the app to Applications folder
-4. Open the app (you may need to allow it in Security settings)
-
-### Linux
-1. Download `FAI_PDF_Processor.AppImage` from [Releases](../../releases)
-3. Make executable: `chmod +x FAI_PDF_Processor.AppImage`
-4. Run: `./FAI_PDF_Processor.AppImage`
-
 ## 🔧 Installation from Source
 
 ### 1. Install System Dependencies for OCR
