@@ -35,6 +35,29 @@ A powerful desktop application for processing FAI (First Article Inspection) Exc
 - **Force OCR**: Option to force OCR on all PDFs regardless of text content
 - **Auto-sizing Window**: GUI automatically adjusts to fit content
 
+<<<<<<< HEAD
+=======
+## 📥 Quick Start (Pre-built Executables)
+
+### Windows
+1. Download `FAI_PDF_Processor.exe` from [Releases](../../releases)
+2. Run `setup_dependencies_windows.bat` to install Tesseract and Poppler
+3. Double-click the executable to run (or use `run_with_check.bat`)
+
+**📘 See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows setup instructions**
+
+### macOS
+1. Download `FAI_PDF_Processor.dmg` from [Releases](../../releases)
+2. Install Tesseract: `brew install tesseract poppler`
+3. Drag the app to Applications folder
+4. Open the app (you may need to allow it in Security settings)
+
+### Linux
+1. Download `FAI_PDF_Processor.AppImage` from [Releases](../../releases)
+3. Make executable: `chmod +x FAI_PDF_Processor.AppImage`
+4. Run: `./FAI_PDF_Processor.AppImage`
+
+>>>>>>> 154ad6d51e7aaf026a72aa5cf1ca8d6b818ca1e5
 ## 🔧 Installation from Source
 
 ### 1. Install System Dependencies for OCR
@@ -56,9 +79,24 @@ brew install tesseract poppler
 ```
 
 **Windows:**
+```batch
+# Automated setup (recommended)
+setup_dependencies_windows.bat
+
+# Or see WINDOWS_SETUP.md for detailed instructions
+```
+
+For manual installation:
 1. Download and install Tesseract from: https://github.com/UB-Mannheim/tesseract/wiki
+<<<<<<< HEAD
 2. Download and install Poppler from: https://github.com/oschwartz10612/poppler-windows/releases
 3. Add both to your system PATH
+=======
+2. Download and install Poppler from: https://github.com/oschwartz10612/poppler-windows/releases/
+3. The application will automatically detect and configure paths
+
+**📘 See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for comprehensive Windows installation guide**
+>>>>>>> 154ad6d51e7aaf026a72aa5cf1ca8d6b818ca1e5
 
 ### 2. Install Python Dependencies
 
