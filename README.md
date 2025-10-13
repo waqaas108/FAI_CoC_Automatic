@@ -6,34 +6,6 @@ A powerful Windows desktop application for processing FAI (First Article Inspect
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)
 
-## 🎯 Key Features
-
-### Document Processing
-- **Smart Excel Parsing**: Automatically extracts tables from complex Excel files with mixed content
-- **Flexible PDF Matching**: Intelligently matches PDFs using Cablex P/N and FAIR Identifier patterns
-- **Advanced OCR**: Processes scanned PDFs using Tesseract OCR to make them searchable
-- **Visual Highlighting**: Creates highlighted PDFs with yellow markers on found part numbers
-- **Parallel Processing**: Uses multithreading to process multiple PDFs simultaneously (up to 8 threads)
-- **Batch Processing**: Handles entire directory structures with hundreds of files efficiently
-
-### User Interface
-- **Interactive GUI**: Modern interface with real-time progress tracking
-- **Clickable Results Table**: Double-click to open Excel files, PDFs, or highlighted outputs
-- **Smart Filtering**: Filter results by "All", "PDF Found", "PDF Not Found", "Part Number Not Found", or "Part Number Found"
-- **File-Based Progress**: Progress bar shows Excel file processing with real-time updates
-- **Process Controls**: Stop current processing or Reset for a new run
-- **Built-in Help**: Comprehensive help dialog accessible with one click
-
-### Output Options
-- **Centralized Results**: Option to save all highlighted PDFs in a single output folder
-- **CSV Export**: Comprehensive results export with all matching details
-- **Searchable PDFs**: OCR-processed PDFs become fully searchable with selectable text
-
-### Advanced Features
-- **Recursive Search**: Finds FAI and CoC folders in subdirectories (up to depth 3)
-- **Force OCR**: Option to force OCR on all PDFs regardless of text content
-- **Auto-sizing Window**: GUI automatically adjusts to fit content
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -52,8 +24,6 @@ That's it! The script will:
 - ✅ Install Python dependencies automatically
 - ✅ Extract and configure Poppler utilities
 - ✅ Launch the GUI application
-
-**Note:** See [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md) for detailed setup guide and troubleshooting.
 
 ## 🔧 Manual Installation
 
@@ -134,6 +104,35 @@ The application handles:
 2. **Memory usage**: Process directories in batches if handling thousands of files
 3. **PDF processing**: Highlighted PDFs are saved separately to preserve originals
 4. **PATH Configuration**: `run.bat` automatically configures all paths, even if system PATH is reset
+
+## 🎯 Key Features
+
+### Document Processing
+- **Smart Excel Parsing**: Automatically extracts tables from complex Excel files with mixed content
+- **Flexible PDF Matching**: Intelligently matches PDFs using Cablex P/N and FAIR Identifier patterns
+- **Advanced OCR**: Processes scanned PDFs using Tesseract OCR to make them searchable
+- **Visual Highlighting**: Creates highlighted PDFs with yellow markers on found part numbers
+- **Parallel Processing**: Uses multithreading to process multiple PDFs simultaneously (up to 8 threads)
+- **Batch Processing**: Handles entire directory structures with hundreds of files efficiently
+
+### User Interface
+- **Interactive GUI**: Modern interface with real-time progress tracking
+- **Clickable Results Table**: Double-click to open Excel files, PDFs, or highlighted outputs
+- **Smart Filtering**: Filter results by "All", "PDF Found", "PDF Not Found", "Part Number Not Found", or "Part Number Found"
+- **File-Based Progress**: Progress bar shows Excel file processing with real-time updates
+- **Process Controls**: Stop current processing or Reset for a new run
+- **Built-in Help**: Comprehensive help dialog accessible with one click
+
+### Output Options
+- **Centralized Results**: Option to save all highlighted PDFs in a single output folder
+- **CSV Export**: Comprehensive results export with all matching details
+- **Searchable PDFs**: OCR-processed PDFs become fully searchable with selectable text
+
+### Advanced Features
+- **Recursive Search**: Finds FAI and CoC folders in subdirectories (up to depth 3)
+- **Force OCR**: Option to force OCR on all PDFs regardless of text content
+- **Auto-sizing Window**: GUI automatically adjusts to fit content
+
 
 ## Troubleshooting
 
