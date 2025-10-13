@@ -13,6 +13,17 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+REM Check and setup dependencies (Tesseract and Poppler)
+echo.
+echo Checking dependencies...
+if exist setup_dependencies_windows.bat (
+    call setup_dependencies_windows.bat
+) else (
+    echo Warning: setup_dependencies_windows.bat not found
+    echo Tesseract and Poppler may need to be installed manually
+)
+echo.
+
 REM Install dependencies
 echo Installing dependencies...
 pip install -r requirements.txt

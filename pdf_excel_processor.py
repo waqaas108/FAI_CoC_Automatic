@@ -29,6 +29,89 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def setup_windows_paths():
+    """Setup Tesseract and Poppler paths for Windows"""
+    if platform.system() != 'Windows':
+        return
+    
+    # Common Tesseract installation paths
+    tesseract_paths = [
+        r'C:\Program Files\Tesseract-OCR',
+        r'C:\Program Files (x86)\Tesseract-OCR',
+        r'C:\Program Files\FAI_Processor_Dependencies\Tesseract-OCR',
+        os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR'),
+        os.path.expandvars(r'%ProgramFiles(x86)%\Tesseract-OCR'),
+    ]
+    
+    # Common Poppler installation paths
+    poppler_paths = [
+        r'C:\Program Files\poppler\Library\bin',
+        r'C:\Program Files (x86)\poppler\Library\bin',
+        r'C:\Program Files\poppler\bin',
+        r'C:\Program Files\FAI_Processor_Dependencies\poppler\Library\bin',
+        r'C:\Program Files\FAI_Processor_Dependencies\poppler\bin',
+        os.path.expandvars(r'%ProgramFiles%\poppler\Library\bin'),
+        os.path.expandvars(r'%ProgramFiles(x86)%\poppler\Library\bin'),
+    ]
+    
+    # Check for dependency_paths.txt config file
+    config_file = Path(__file__).parent / 'dependency_paths.txt'
+    if config_file.exists():
+        try:
+            with open(config_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('TESSERACT_PATH=') and 'NOT_FOUND' not in line:
+                        path = line.split('=', 1)[1].strip()
+                        if path and Path(path).exists():
+                            tesseract_paths.insert(0, path)
+                    elif line.startswith('POPPLER_PATH=') and 'NOT_FOUND' not in line:
+                        path = line.split('=', 1)[1].strip()
+                        if path and Path(path).exists():
+                            poppler_paths.insert(0, path)
+        except Exception as e:
+            logger.debug(f"Could not read config file: {e}")
+    
+    # Find and set Tesseract path
+    tesseract_found = False
+    for tess_path in tesseract_paths:
+        tesseract_exe = Path(tess_path) / 'tesseract.exe'
+        if tesseract_exe.exists():
+            try:
+                import pytesseract
+                pytesseract.pytesseract.tesseract_cmd = str(tesseract_exe)
+                logger.info(f"Tesseract found at: {tesseract_exe}")
+                tesseract_found = True
+                break
+            except ImportError:
+                pass
+    
+    if not tesseract_found:
+        logger.warning("Tesseract not found in common locations. OCR may not work.")
+    
+    # Find and add Poppler to PATH
+    poppler_found = False
+    for pop_path in poppler_paths:
+        pdftoppm_exe = Path(pop_path) / 'pdftoppm.exe'
+        if pdftoppm_exe.exists():
+            # Add to PATH if not already there
+            if pop_path not in os.environ.get('PATH', ''):
+                os.environ['PATH'] = f"{pop_path};{os.environ.get('PATH', '')}"
+            logger.info(f"Poppler found at: {pop_path}")
+            poppler_found = True
+            break
+    
+    if not poppler_found:
+        logger.warning("Poppler not found in common locations. PDF to image conversion may not work.")
+    
+    return tesseract_found and poppler_found
+
+
+# Setup Windows paths before importing OCR libraries
+if platform.system() == 'Windows':
+    setup_windows_paths()
+
 # OCR imports with error handling
 try:
     import pytesseract
@@ -57,6 +140,9 @@ class PDFExcelProcessor:
         if self.separate_output and not self.destructive:
             self.output_folder = self.base_path / "highlighted_pdfs"
             self.output_folder.mkdir(exist_ok=True)
+        
+        # Track folder structure for organizing outputs
+        self.folder_map = {}
         
     @staticmethod
     def _clean_cell(value) -> str:
@@ -153,10 +239,30 @@ class PDFExcelProcessor:
 
         return pd.DataFrame(records)
 
-    def extract_fai_number(self, folder_name: str) -> str:
-        """Extract the FAI number from folder name (e.g., 'FAI 127K667G02' -> '127K667G02')"""
+    def extract_identifier(self, folder_name: str) -> str:
+        """Extract the identifier from folder name
+        
+        Examples:
+            'FAI 127K667G02' -> '127K667G02'
+            'Material CoC 127K667G02' -> '127K667G02'
+            '127K667G02' -> '127K667G02'
+        """
+        # Try to extract from 'FAI <identifier>' pattern
         match = re.search(r'FAI\s+(.+)', folder_name)
-        return match.group(1) if match else folder_name
+        if match:
+            return match.group(1)
+        
+        # Try to extract from 'Material CoC <identifier>' pattern
+        match = re.search(r'Material\s+CoC\s+(.+)', folder_name)
+        if match:
+            return match.group(1)
+        
+        # Return as-is if no pattern matches
+        return folder_name
+    
+    def extract_fai_number(self, folder_name: str) -> str:
+        """Legacy method - calls extract_identifier for backward compatibility"""
+        return self.extract_identifier(folder_name)
     
     def read_excel_tables(self, excel_path: Path) -> pd.DataFrame:
         """Read Excel file and extract tables with required columns"""
@@ -322,8 +428,14 @@ class PDFExcelProcessor:
             logger.error(f"OCR error on {pdf_path}: {e}")
             return False, []
     
-    def search_and_highlight_pdf(self, pdf_path: Path, search_term: str) -> Tuple[bool, Path]:
-        """Search for term in PDF and highlight if found, using OCR if needed"""
+    def search_and_highlight_pdf(self, pdf_path: Path, search_term: str, source_folder: str = None) -> Tuple[bool, Path]:
+        """Search for term in PDF and highlight if found, using OCR if needed
+        
+        Args:
+            pdf_path: Path to the PDF file
+            search_term: Term to search for
+            source_folder: Name of the source folder (e.g., 'Material CoC 123456') for organizing outputs
+        """
         try:
             doc = fitz.open(str(pdf_path))
             found = False
@@ -377,7 +489,13 @@ class PDFExcelProcessor:
                     # Replace original file in place
                     output_path = pdf_path
                 elif self.separate_output and self.output_folder:
-                    output_path = self.output_folder / f"highlighted_{pdf_path.name}"
+                    # Create subfolder based on source folder
+                    if source_folder:
+                        subfolder = self.output_folder / source_folder
+                        subfolder.mkdir(exist_ok=True)
+                        output_path = subfolder / f"highlighted_{pdf_path.name}"
+                    else:
+                        output_path = self.output_folder / f"highlighted_{pdf_path.name}"
                 else:
                     output_path = pdf_path.parent / f"highlighted_{pdf_path.name}"
                 
@@ -409,80 +527,97 @@ class PDFExcelProcessor:
             'parts_highlighted': 0
         }
         
-        # Step 1: Find all FAI and CoC folder pairs (search up to depth 3)
+        # Step 1: Find all Material CoC folders and their corresponding Excel folders (search up to depth 3)
         if detailed_callback:
             detailed_callback("Step 1: Finding folder pairs...", 0)
         
-        # Search for FAI folders up to depth 3
-        fai_folders = []
-        def find_fai_folders(directory, current_depth=0, max_depth=3):
+        # Search for Material CoC folders up to depth 3 (these are stable)
+        coc_folders = []
+        def find_coc_folders(directory, current_depth=0, max_depth=3):
             if current_depth > max_depth:
                 return
             try:
                 for item in directory.iterdir():
                     if item.is_dir():
-                        if item.name.startswith('FAI'):
-                            fai_folders.append(item)
+                        if item.name.startswith('Material CoC'):
+                            coc_folders.append(item)
                         # Recurse into subdirectories
                         if current_depth < max_depth:
-                            find_fai_folders(item, current_depth + 1, max_depth)
+                            find_coc_folders(item, current_depth + 1, max_depth)
             except PermissionError:
                 pass
         
-        find_fai_folders(self.base_path)
-        fai_folders = sorted(fai_folders)
-        stats['fai_folders'] = len(fai_folders)
+        find_coc_folders(self.base_path)
+        coc_folders = sorted(coc_folders)
+        stats['coc_folders'] = len(coc_folders)
         
-        # Check for corresponding CoC folders
+        # For each CoC folder, find corresponding Excel folder
         folder_pairs = []
-        for fai_folder in fai_folders:
-            fai_number = self.extract_fai_number(fai_folder.name)
+        for coc_folder in coc_folders:
+            identifier = self.extract_identifier(coc_folder.name)
+            parent_dir = coc_folder.parent
             
-            # Search for CoC folder in same directory as FAI folder
-            parent_dir = fai_folder.parent
-            coc_folder = parent_dir / f"Material CoC {fai_number}"
+            # Try multiple patterns to find the Excel folder
+            excel_folder = None
+            potential_names = [
+                f"FAI {identifier}",  # Standard FAI folder
+                identifier,           # Just the identifier (for kit folders)
+                f"FAI{identifier}",   # No space variant
+            ]
+            
+            # First check in same directory
+            for name in potential_names:
+                candidate = parent_dir / name
+                if candidate.exists() and candidate.is_dir():
+                    excel_folder = candidate
+                    break
             
             # If not found in same directory, search in subdirectories
-            if not coc_folder.exists():
-                # Try searching up to depth 3 from the parent directory
-                found_coc = None
-                def find_coc_folder(directory, target_name, current_depth=0, max_depth=3):
-                    nonlocal found_coc
-                    if found_coc or current_depth > max_depth:
+            if not excel_folder:
+                found_excel = None
+                def find_excel_folder(directory, target_names, current_depth=0, max_depth=3):
+                    nonlocal found_excel
+                    if found_excel or current_depth > max_depth:
                         return
                     try:
                         for item in directory.iterdir():
                             if item.is_dir():
-                                if item.name == target_name:
-                                    found_coc = item
+                                if item.name in target_names:
+                                    found_excel = item
                                     return
                                 if current_depth < max_depth:
-                                    find_coc_folder(item, target_name, current_depth + 1, max_depth)
+                                    find_excel_folder(item, target_names, current_depth + 1, max_depth)
                     except PermissionError:
                         pass
                 
-                find_coc_folder(parent_dir, f"Material CoC {fai_number}")
-                coc_folder = found_coc
+                find_excel_folder(parent_dir, potential_names)
+                excel_folder = found_excel
             
-            if coc_folder and coc_folder.exists():
-                stats['coc_folders'] += 1
-                folder_pairs.append((fai_folder, coc_folder, fai_number))
+            if excel_folder and excel_folder.exists():
+                stats['fai_folders'] += 1
+                folder_pairs.append((excel_folder, coc_folder, identifier))
+                logger.info(f"Paired: {excel_folder.name} <-> {coc_folder.name}")
             else:
-                logger.warning(f"No Material CoC folder found for {fai_folder.name}")
-                folder_pairs.append((fai_folder, None, fai_number))
+                logger.warning(f"No Excel folder found for {coc_folder.name}. Tried: {', '.join(potential_names)}")
+                # Still add the CoC folder even without Excel folder
+                folder_pairs.append((None, coc_folder, identifier))
         
         if detailed_callback:
-            detailed_callback(f"Step 1: Found {stats['fai_folders']} FAI folders, {stats['coc_folders']} CoC folders", 10)
+            detailed_callback(f"Step 1: Found {stats['coc_folders']} CoC folders, {stats['fai_folders']} Excel folders", 10)
         
         # Step 2: Find Excel files
         if detailed_callback:
             detailed_callback("Step 2: Finding Excel files...", 15)
         
         excel_files_to_process = []
-        for fai_folder, coc_folder, fai_number in folder_pairs:
-            excel_files = list(fai_folder.glob('*.xlsx')) + list(fai_folder.glob('*.xls'))
+        for excel_folder, coc_folder, identifier in folder_pairs:
+            # Skip if no Excel folder found
+            if not excel_folder:
+                continue
+            
+            excel_files = list(excel_folder.glob('*.xlsx')) + list(excel_folder.glob('*.xls'))
             for excel_file in excel_files:
-                excel_files_to_process.append((excel_file, fai_folder, coc_folder, fai_number))
+                excel_files_to_process.append((excel_file, excel_folder, coc_folder, identifier))
                 stats['excel_files'] += 1
         
         if detailed_callback:
@@ -499,7 +634,7 @@ class PDFExcelProcessor:
             detailed_callback("Step 3: Parsing Excel files...", 25)
         
         total_files = len(excel_files_to_process)
-        for idx, (excel_file, fai_folder, coc_folder, fai_number) in enumerate(excel_files_to_process):
+        for idx, (excel_file, excel_folder, coc_folder, identifier) in enumerate(excel_files_to_process):
             # Check if we should stop
             if should_stop():
                 logger.info("Processing stopped by user")
@@ -528,9 +663,10 @@ class PDFExcelProcessor:
             
             stats['excel_rows'] += len(df)
             
-            # Add FAI number column
-            df['FAI Folder'] = fai_number
+            # Add identifier column
+            df['FAI Folder'] = identifier
             df['Excel File'] = excel_file.name
+            df['Excel Folder Name'] = excel_folder.name
             
             # Process each row
             total_rows = len(df)
@@ -560,15 +696,19 @@ class PDFExcelProcessor:
                     result['PDF File'] = pdf_path.name
                     
                     # Step 5: Search and highlight Part Number in PDF
+                    # Pass the source folder name for organizing outputs
+                    source_folder_name = coc_folder.name if coc_folder else None
                     found, output_path = self.search_and_highlight_pdf(
                         pdf_path, 
-                        row['Part Number']
+                        row['Part Number'],
+                        source_folder=source_folder_name
                     )
                     
                     if found:
                         stats['parts_highlighted'] += 1
                         result['Part Number Found'] = 'Yes'
                         result['Highlighted PDF'] = output_path.name
+                        result['Source Folder'] = source_folder_name  # Track source folder
                         self.processed_pdfs.append(output_path)
                     else:
                         result['Part Number Found'] = 'No'
@@ -1225,7 +1365,12 @@ For issues or questions, check the README.md file or open an issue on GitHub.
                 highlighted_path = ''
                 if row.get('Highlighted PDF'):
                     if self.processor.separate_output and self.processor.output_folder:
-                        highlighted_path = str(self.processor.output_folder / row.get('Highlighted PDF'))
+                        # Check if we have source folder info
+                        source_folder = row.get('Source Folder', '')
+                        if source_folder:
+                            highlighted_path = str(self.processor.output_folder / source_folder / row.get('Highlighted PDF'))
+                        else:
+                            highlighted_path = str(self.processor.output_folder / row.get('Highlighted PDF'))
                     else:
                         coc_folder = f"Material CoC {row.get('FAI Folder', '')}"
                         highlighted_path = str(self.processor.base_path / coc_folder / row.get('Highlighted PDF'))

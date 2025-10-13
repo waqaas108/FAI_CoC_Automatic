@@ -11,6 +11,17 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Check and setup dependencies (Tesseract and Poppler)
+echo.
+echo Checking dependencies...
+if exist setup_dependencies_windows.bat (
+    call setup_dependencies_windows.bat
+) else (
+    echo Warning: setup_dependencies_windows.bat not found
+    echo Tesseract and Poppler may need to be installed manually
+)
+echo.
+
 :: Create virtual environment if it doesn't exist
 if not exist venv (
     echo Creating virtual environment...
